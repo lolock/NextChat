@@ -137,13 +137,13 @@ export function NewChat() {
       </div>
       <div className={styles["mask-cards"]}>
         <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f606" size={24} />
+          <ChatGptIcon />
         </div>
         <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f916" size={24} />
+          <ChatGptIcon />
         </div>
         <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f479" size={24} />
+          <ChatGptIcon />
         </div>
       </div>
 
@@ -151,22 +151,7 @@ export function NewChat() {
       <div className={styles["sub-title"]}>{Locale.NewChat.SubTitle}</div>
 
       <div className={styles["actions"]}>
-        <IconButton
-          text={Locale.NewChat.More}
-          onClick={() => navigate(Path.Masks)}
-          icon={<EyeIcon />}
-          bordered
-          shadow
-        />
-
-        <IconButton
-          text={Locale.NewChat.Skip}
-          onClick={() => startChat()}
-          icon={<LightningIcon />}
-          type="primary"
-          shadow
-          className={styles["skip"]}
-        />
+        {/* 面具功能已禁用 */}
       </div>
 
       <div className={styles["masks"]} ref={maskRef}>

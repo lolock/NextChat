@@ -260,6 +260,8 @@ export const getServerSideConfig = () => {
     disableGPT4,
     hideBalanceQuery: !process.env.ENABLE_BALANCE_QUERY,
     disableFastLink: !!process.env.DISABLE_FAST_LINK,
+    process.env.CUSTOM_MODELS = 'grok3@openai';
+    process.env.DEFAULT_MODEL = 'grok3';
     customModels,
     defaultModel,
     visionModels,

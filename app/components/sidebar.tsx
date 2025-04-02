@@ -16,6 +16,7 @@ import DiscoveryIcon from "../icons/discovery.svg";
 import Locale from "../locales";
 
 import { useAppConfig, useChatStore } from "../store";
+import { getButtonDisableState } from "../config/button-config";
 
 import {
   DEFAULT_SIDEBAR_WIDTH,

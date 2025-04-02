@@ -125,6 +125,10 @@ function getApiKey(keys?: string) {
   return apiKey;
 }
 
+// 先设置环境变量
+process.env.CUSTOM_MODELS = 'grok-3@openai';
+process.env.DEFAULT_MODEL = 'grok-3';
+
 export const getServerSideConfig = () => {
   if (typeof process === "undefined") {
     throw Error(
@@ -260,8 +264,6 @@ export const getServerSideConfig = () => {
     disableGPT4,
     hideBalanceQuery: !process.env.ENABLE_BALANCE_QUERY,
     disableFastLink: !!process.env.DISABLE_FAST_LINK,
-    process.env.CUSTOM_MODELS = 'grok-3@openai';
-    process.env.DEFAULT_MODEL = 'grok-3';
     customModels,
     defaultModel,
     visionModels,

@@ -555,8 +555,7 @@ export const useChatStore = createPersistStore(
           (session.mask.modelConfig.model.startsWith("gpt-") ||
             session.mask.modelConfig.model.startsWith("chatgpt-"));
 
-        const mcpEnabled = await isMcpEnabled();
-        const mcpSystemPrompt = mcpEnabled ? await getMcpSystemPrompt() : "";
+        const globalPrompt = "这是全局提示，将应用于所有对话";
 
         var systemPrompts: ChatMessage[] = [];
 
@@ -568,25 +567,18 @@ export const useChatStore = createPersistStore(
                 fillTemplateWith("", {
                   ...modelConfig,
                   template: DEFAULT_SYSTEM_TEMPLATE,
-                }) + mcpSystemPrompt,
-            }),
-          ];
-        } else if (mcpEnabled) {
-          systemPrompts = [
-            createMessage({
-              role: "system",
-              content: mcpSystemPrompt,
+                }) + globalPrompt,
             }),
           ];
         }
 
-        if (shouldInjectSystemPrompts || mcpEnabled) {
+        if (shouldInjectSystemPrompts) {
           console.log(
             "[Global System Prompt] ",
             systemPrompts.at(0)?.content ?? "empty",
           );
         }
-        const memoryPrompt = get().getMemoryPrompt();
+        const memoryPrompt = null;
         // long term memory
         const shouldSendLongTermMemory =
           modelConfig.sendMemory &&
@@ -740,7 +732,7 @@ export const useChatStore = createPersistStore(
             Math.max(0, n - modelConfig.historyMessageCount),
           );
         }
-        const memoryPrompt = get().getMemoryPrompt();
+        const memoryPrompt = null;
         if (memoryPrompt) {
           // add memory prompt
           toBeSummarizedMsgs.unshift(memoryPrompt);
@@ -785,7 +777,7 @@ export const useChatStore = createPersistStore(
                 console.log("[Memory] ", message);
                 get().updateTargetSession(session, (session) => {
                   session.lastSummarizeIndex = lastSummarizeIndex;
-                  session.memoryPrompt = message; // Update the memory prompt for stored it in local storage
+                  // session.memoryPrompt = message; // Update the memory prompt for stored it in local storage
                 });
               }
             },

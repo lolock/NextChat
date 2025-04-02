@@ -12,18 +12,6 @@ import {
   useChatStore,
 } from "../store";
 import { ChatGPTApi, DalleRequestPayload } from "./platforms/openai";
-import { GeminiProApi } from "./platforms/google";
-import { ClaudeApi } from "./platforms/anthropic";
-import { ErnieApi } from "./platforms/baidu";
-import { DoubaoApi } from "./platforms/bytedance";
-import { QwenApi } from "./platforms/alibaba";
-import { HunyuanApi } from "./platforms/tencent";
-import { MoonshotApi } from "./platforms/moonshot";
-import { SparkApi } from "./platforms/iflytek";
-import { DeepSeekApi } from "./platforms/deepseek";
-import { XAIApi } from "./platforms/xai";
-import { ChatGLMApi } from "./platforms/glm";
-import { SiliconflowApi } from "./platforms/siliconflow";
 
 export const ROLES = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof ROLES)[number];
@@ -137,42 +125,7 @@ export class ClientApi {
 
   constructor(provider: ModelProvider = ModelProvider.GPT) {
     switch (provider) {
-      case ModelProvider.GeminiPro:
-        this.llm = new GeminiProApi();
-        break;
-      case ModelProvider.Claude:
-        this.llm = new ClaudeApi();
-        break;
-      case ModelProvider.Ernie:
-        this.llm = new ErnieApi();
-        break;
-      case ModelProvider.Doubao:
-        this.llm = new DoubaoApi();
-        break;
-      case ModelProvider.Qwen:
-        this.llm = new QwenApi();
-        break;
-      case ModelProvider.Hunyuan:
-        this.llm = new HunyuanApi();
-        break;
-      case ModelProvider.Moonshot:
-        this.llm = new MoonshotApi();
-        break;
-      case ModelProvider.Iflytek:
-        this.llm = new SparkApi();
-        break;
-      case ModelProvider.DeepSeek:
-        this.llm = new DeepSeekApi();
-        break;
-      case ModelProvider.XAI:
-        this.llm = new XAIApi();
-        break;
-      case ModelProvider.ChatGLM:
-        this.llm = new ChatGLMApi();
-        break;
-      case ModelProvider.SiliconFlow:
-        this.llm = new SiliconflowApi();
-        break;
+      
       default:
         this.llm = new ChatGPTApi();
     }

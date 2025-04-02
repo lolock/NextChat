@@ -48,7 +48,17 @@
    - 确保 `DEFAULT_MODEL` 与 `CUSTOM_MODELS` 中的模型名称一致
    - 例如：如果设置 `CUSTOM_MODELS=grok-3@openai`，则应设置 `DEFAULT_MODEL=grok-3`
 
-## 重新部署
+## 包管理器不匹配问题
+
+如果您在部署日志中看到类似 `The project is set up for yarn but it is currently being run via npm` 的警告，这意味着您的项目配置使用 `yarn`，但 Cloudflare Pages 的构建命令默认使用了 `npm`。
+
+1. **设置包管理器**:
+   - 在 Cloudflare Pages 的项目设置中，找到 "Build settings" > "Build command"。
+   - 如果您的项目使用 `yarn`，请确保构建命令使用 `yarn`。例如，您的构建命令可能需要从 `npx @cloudflare/next-on-pages` 修改为 `yarn build && npx @cloudflare/next-on-pages` 或类似的命令，具体取决于您的项目配置。
+   - 或者，您可以尝试在环境变量中设置 `NPM_FLAGS="--prefix=/dev/null"` 来强制 Cloudflare Pages 使用 `yarn`。
+
+2. **确认 `package-lock.json` 文件**:
+   - 如果您打算使用 `npm`，请确保项目中存在 `package-lock.json` 文件，
 
 完成上述配置更改后：
 

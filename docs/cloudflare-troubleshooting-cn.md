@@ -5,8 +5,8 @@
 在 Cloudflare Pages 部署过程中，如果您遇到 Node.js 版本兼容性警告，请按照以下步骤解决：
 
 1. **更新 Node.js 版本**：
-   - 当前文档中推荐的 `NODE_VERSION=20.1` 可能与某些依赖包不兼容
-   - 建议更新为更高版本，例如：`NODE_VERSION=20.10.0` 或更新版本
+   - 当前文档中推荐的 `NODE_VERSION=20.1` 与某些依赖包（如sharp@0.33.5）不兼容
+   - 建议更新为Node.js 20.11.x或更高版本，例如：`NODE_VERSION=20.11.1`
 
 2. **更新环境变量**：
    - 登录 Cloudflare Dashboard

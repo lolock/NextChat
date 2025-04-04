@@ -36,7 +36,8 @@ import { toBlob, toPng } from "html-to-image";
 import { prettyObject } from "../utils/format";
 import { EXPORT_MESSAGE_CLASS_NAME } from "../constant";
 import { getClientConfig } from "../config/client";
-import { type ClientApi, getClientApi } from "../client/api";
+import { type ClientApi } from "../client/api"; // Removed getClientApi import
+import { ClientApi } from "../client/api";
 import { getMessageTextContent } from "../utils";
 - // import { MaskAvatar } from "./mask"; // Removed MaskAvatar import
 import clsx from "clsx";
@@ -297,7 +298,7 @@ export function PreviewActions(props: {
   const onRenderMsgs = (msgs: ChatMessage[]) => {
     setShouldExport(false);
 
-    const api: ClientApi = getClientApi(config.modelConfig.providerName);
+    const api: ClientApi = new ClientApi();
 
     api
       .share(msgs)
@@ -659,7 +660,7 @@ function ExportActions(props: {
   const config = useAppConfig();
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
-  const clientApi: ClientApi = getClientApi();
+  const clientApi: ClientApi = new ClientApi();
 
   const shareToShareGPT = async () => {
     const GITHUB_ISSUE_URL = "https://github.com/ChatGPTNextWeb/sharegpt-collection";

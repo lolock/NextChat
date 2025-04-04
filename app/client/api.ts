@@ -1,12 +1,9 @@
 import { getClientConfig } from "../config/client";
 import {
   ACCESS_CODE_PREFIX,
-- ModelProvider,
-- ServiceProvider,
-+ // ModelProvider, // Removed as we only support OpenAI compatible now
-+ ServiceProvider, // Keep ServiceProvider for now, might be used differently
+  // ModelProvider, // Removed as we only support OpenAI compatible now
+  ServiceProvider, // Keep ServiceProvider for now, might be used
 } from "../constant";
-import {
   ChatMessageTool,
   ChatMessage,
   ModelType,
@@ -30,11 +27,7 @@ export interface MultimodalContent {
   };
 }
 
--export interface MultimodalContentForAlibaba {
--  text?: string;
--  image?: string;
--}
--
+
 export interface RequestMessage {
   role: MessageRole;
   content: string | MultimodalContent[];
@@ -101,42 +94,14 @@ export abstract class LLMApi {
   abstract models(): Promise<LLMModel[]>;
 }
 
--type ProviderName = "openai" | "azure" | "claude" | "palm";
--
--interface Model {
--  name: string;
--  provider: ProviderName;
--  ctxlen: number;
--}
--
--interface ChatProvider {
--  name: ProviderName;
--  apiConfig: {
--    baseUrl: string;
--    apiKey: string;
--    summaryModel: Model;
--  };
--  models: Model[];
--
--  chat: () => void;
--  usage: () => void;
--}
--
+
 export class ClientApi {
   public llm: LLMApi;
 
-- constructor(provider: ModelProvider = ModelProvider.GPT) {
--   switch (provider) {
--     
--     default:
--       this.llm = new ChatGPTApi();
--   }
-+ constructor() {
-+   // Always use ChatGPTApi for OpenAI compatible endpoint
-+   this.llm = new ChatGPTApi();
+  constructor() {
+    // Always use ChatGPTApi for OpenAI compatible endpoint
+    this.llm = new ChatGPTApi();
   }
-
-  config() {}
 
   prompts() {}
 
@@ -312,35 +277,4 @@ export function getHeaders(ignoreHeaders: boolean = false) {
   }
 
   return headers;
-}
-
-export function getClientApi(provider: ServiceProvider): ClientApi {
-  switch (provider) {
-    case ServiceProvider.Google:
-      return new ClientApi(ModelProvider.GeminiPro);
-    case ServiceProvider.Anthropic:
-      return new ClientApi(ModelProvider.Claude);
-    case ServiceProvider.Baidu:
-      return new ClientApi(ModelProvider.Ernie);
-    case ServiceProvider.ByteDance:
-      return new ClientApi(ModelProvider.Doubao);
-    case ServiceProvider.Alibaba:
-      return new ClientApi(ModelProvider.Qwen);
-    case ServiceProvider.Tencent:
-      return new ClientApi(ModelProvider.Hunyuan);
-    case ServiceProvider.Moonshot:
-      return new ClientApi(ModelProvider.Moonshot);
-    case ServiceProvider.Iflytek:
-      return new ClientApi(ModelProvider.Iflytek);
-    case ServiceProvider.DeepSeek:
-      return new ClientApi(ModelProvider.DeepSeek);
-    case ServiceProvider.XAI:
-      return new ClientApi(ModelProvider.XAI);
-    case ServiceProvider.ChatGLM:
-      return new ClientApi(ModelProvider.ChatGLM);
-    case ServiceProvider.SiliconFlow:
-      return new ClientApi(ModelProvider.SiliconFlow);
-    default:
-      return new ClientApi(ModelProvider.GPT);
-  }
 }

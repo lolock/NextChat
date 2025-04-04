@@ -8,11 +8,10 @@ import {
 import { indexedDBStorage } from "@/app/utils/indexedDB-storage";
 import { nanoid } from "nanoid";
 import type {
-  ClientApi,
   MultimodalContent,
   RequestMessage,
 } from "../client/api";
-import { getClientApi } from "../client/api";
+import { ClientApi } from "../client/api"; // Import ClientApi directly
 import { ChatControllerPool } from "../client/controller";
 import { showToast } from "../components/ui-lib";
 import {
@@ -372,10 +371,8 @@ export const useChatStore = createPersistStore(
         providerName: summarizeModelProviderName,
       };
 
-      const clientApi = getClientApi(
-        modelConfig.providerName as ServiceProvider,
-      );
-      const messages = session.messages.concat();
+      const clientApi = new ClientApi(); // Replace getClientApi call
+      const messages
       const requestMessages = messages.concat(
         {
           role: "user",

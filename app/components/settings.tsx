@@ -1952,14 +1952,3 @@ function SyncItems() {
       plugin: pluginStore.plugins.length,
     };
   }, [chatStore.sessions, promptStore.prompts, pluginStore.plugins]); // Removed maskStore dependency, added pluginStore
-
-  const [showSyncConfigModal, setShowSyncConfigModal] = useState(false);
-
-  const stateOverview = useMemo(() => {
-    const sessions = chatStore.sessions;
-    // const masks = maskStore.getAll(); // Removed mask store usage
-    const prompts = promptStore.prompts;
-
-    return {
-      chat: sessions.length,
-      prom

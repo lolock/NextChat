@@ -20,26 +20,23 @@ import SpeakIcon from "../icons/speak.svg";
 import SpeakStopIcon from "../icons/speak-stop.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 import LoadingButtonIcon from "../icons/loading.svg";
-- import PromptIcon from "../icons/
-- import MaskIcon from "../icons/mask.svg";
+import PromptIcon from "../icons/prompt.svg";
  import MaxIcon from "../icons/max.svg";
  import MinIcon from "../icons/min.svg";
 import ReloadIcon from "../icons/reload.svg";
 import BreakIcon from "../icons/break.svg";
 import SettingsIcon from "../icons/chat-settings.svg";
-// - import MaskIcon from "../icons/mask.svg";
 import SearchIcon from "../icons/search.svg";
 import PluginIcon from "../icons/plugin.svg";
-// - import MaskIcon from "../icons/mask.svg"; // Removed mask icon import
 import ConfirmIcon from "../icons/confirm.svg";
 import CancelIcon from "../icons/cancel.svg";
 import SnapshotIcon from "../icons/snapshot.svg";
 
 import DeleteIcon from "../icons/clear.svg";
 import PinIcon from "../icons/pin.svg";
-import ConfirmIcon from "../icons/confirm.svg";
+import ConfirmIcon from "../icons/confirm.svg"; // Re-add missing ConfirmIcon
 import CloseIcon from "../icons/close.svg";
-import CancelIcon from "../icons/cancel.svg";
+import CancelIcon from "../icons/cancel.svg"; // Re-add missing CancelIcon
 import ImageIcon from "../icons/image.svg";
 
 import LightIcon from "../icons/light.svg";
@@ -345,8 +342,7 @@ export function ChatActions(props: {
   hitBottom: boolean;
   uploadInDialog?: boolean;
   uploadImage: (img: string) => void;
--  showPromptHints: () => void;
-+  // showPromptHints: () => void; // Commented out or remove if prompts related to masks are gone
+  // showPromptHints: () => void; // Commented out or remove if prompts related to masks are gone
   config: ReturnType<typeof useAppConfig>;
 })
  {

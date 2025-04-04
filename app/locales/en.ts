@@ -90,7 +90,7 @@ const en: LocaleType = {
       if (submitKey === String(SubmitKey.Enter)) {
         inputHints += ", Shift + Enter to wrap";
       }
-      return inputHints + ", / to search prompts, : to use commands";
+      return inputHints + ", / to search prompts";
     },
     Send: "Send",
     StartSpeak: "Start Speak",
@@ -262,10 +262,11 @@ const en: LocaleType = {
 
       LocalState: "Local Data",
       Overview: (overview: any) => {
-        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${overview.mask} masks`;
+        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts`;
       },
       ImportFailed: "Failed to import from file",
     },
+    /*
     Mask: {
       Splash: {
         Title: "Mask Splash Screen",
@@ -276,6 +277,7 @@ const en: LocaleType = {
         SubTitle: "Hide builtin masks in mask list",
       },
     },
+    */
     Prompt: {
       Disable: {
         Title: "Disable auto-completion",

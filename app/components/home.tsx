@@ -69,9 +69,7 @@ const SearchChat = dynamic(
   },
 );
 
-const Sd = dynamic(async () => (await import("./sd")).Sd, {
-  loading: () => <Loading noLogo />,
-});
+// AI Drawing related component import removed
 
 const McpMarketPage = dynamic(
   async () => (await import("./mcp-market")).McpMarketPage,
@@ -161,8 +159,7 @@ function Screen() {
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
-  const isSd = location.pathname === Path.Sd;
-  const isSdNew = location.pathname === Path.SdNew;
+  // AI Drawing related path checks removed
 
   const isMobileScreen = useMobileScreen();
   const shouldTightBorder =
@@ -181,11 +178,8 @@ function Screen() {
   }
   const renderContent = () => {
     if (isAuth) return <AuthPage />;
-    if (isSd) return <Sd />;
-    if (isSdNew) return <Sd />;
-    return (
-      <>
-        <SideBar
+    // AI Drawing
+      <
           className={clsx({
             [styles["sidebar-show"]]: isHome,
           })}

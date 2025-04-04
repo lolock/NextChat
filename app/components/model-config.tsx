@@ -1,51 +1,54 @@
-import { ServiceProvider } from "@/app/constant";
+// import { ServiceProvider } from "@/app/constant"; // Removed
 import { ModalConfigValidator, ModelConfig } from "../store";
 
 import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem, Select } from "./ui-lib";
 import { useAllModels } from "../utils/hooks";
-import { groupBy } from "lodash-es";
+// import { groupBy } from "lodash-es"; // Removed
 import styles from "./model-config.module.scss";
-import { getModelProvider } from "../utils/model";
+// import { getModelProvider } from "../utils/model"; // Removed
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
 }) {
   const allModels = useAllModels();
-  const groupModels = groupBy(
-    allModels.filter((v) => v.available),
-    "provider.providerName",
-  );
-  const value = `${props.modelConfig.model}@${props.modelConfig?.providerName}`;
-  const compressModelValue = `${props.modelConfig.compressModel}@${props.modelConfig?.compressProviderName}`;
+  // Removed provider grouping
+  // const groupModels = groupBy(
+  //   allModels.filter((v) => v.available),
+  //   "provider.providerName",
+  // );
+  // const value = `${props.modelConfig.model}@${props.modelConfig?.providerName}`;
+  // const compressModelValue = `${props.modelConfig.compressModel}@${props.modelConfig?.compressProviderName}`;
+
+  // Filter available models directly
+  const availableModels = allModels.filter((v) => v.available);
 
   return (
     <>
       <ListItem title={Locale.Settings.Model}>
         <Select
           aria-label={Locale.Settings.Model}
-          value={value}
+          value={props.modelConfig.model} // Use model name directly
           align="left"
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
-              e.currentTarget.value,
-            );
+            // const [model, providerName] = getModelProvider( // Removed provider logic
+            //   e.currentTarget.value,
+            // );
+            const model = e.currentTarget.value;
             props.updateConfig((config) => {
               config.model = ModalConfigValidator.model(model);
-              config.providerName = providerName as ServiceProvider;
+              // config.providerName = providerName as ServiceProvider; // Removed provider logic
             });
           }}
         >
-          {Object.keys(groupModels).map((providerName, index) => (
-            <optgroup label={providerName} key={index}>
-              {groupModels[providerName].map((v, i) => (
-                <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
-                  {v.displayName}
-                </option>
-              ))}
-            </optgroup>
+          {/* Removed provider grouping optgroup */}
+          {/* {Object.keys(groupModels).map((providerName, index) => ( ... ))} */}
+          {availableModels.map((v, i) => (
+            <option value={v.name} key={i}>
+              {v.displayName}
+            </option>
           ))}
         </Select>
       </ListItem>
@@ -110,7 +113,9 @@ export function ModelConfigList(props: {
         ></input>
       </ListItem>
 
-      {props.modelConfig?.providerName == ServiceProvider.Google ? null : (
+      {/* Removed conditional rendering based on provider */}
+      {/* {props.modelConfig?.providerName == ServiceProvider.Google ? null : ( */}
+        <>
         <>
           <ListItem
             title={Locale.Settings.PresencePenalty.Title}
@@ -190,7 +195,7 @@ export function ModelConfigList(props: {
             ></input>
           </ListItem>
         </>
-      )}
+      {/* )} */}
       <ListItem
         title={Locale.Settings.HistoryCount.Title}
         subTitle={Locale.Settings.HistoryCount.SubTitle}
@@ -245,25 +250,27 @@ export function ModelConfigList(props: {
         title={Locale.Settings.CompressModel.Title}
         subTitle={Locale.Settings.CompressModel.SubTitle}
       >
+        {/* Simplified compress model selection - no provider */}
         <Select
           className={styles["select-compress-model"]}
           aria-label={Locale.Settings.CompressModel.Title}
-          value={compressModelValue}
+          value={props.modelConfig.compressModel}
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
-              e.currentTarget.value,
-            );
+            // const [model, providerName] = getModelProvider( // Removed provider logic
+            //   e.currentTarget.value,
+            // );
+            const model = e.currentTarget.value;
             props.updateConfig((config) => {
               config.compressModel = ModalConfigValidator.model(model);
-              config.compressProviderName = providerName as ServiceProvider;
+              // config.compressProviderName = providerName as ServiceProvider; // Removed provider logic
             });
           }}
         >
-          {allModels
-            .filter((v) => v.available)
-            .map((v, i) => (
-              <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
-                {v.displayName}({v.provider?.providerName})
+           {/* Add an option for disabling compression */} 
+          <option value="">{Locale.Settings.CompressModel.None}</option>
+          {availableModels.map((v, i) => (
+              <option value={v.name} key={i}>
+                {v.displayName} {/* Removed provider name display */}
               </option>
             ))}
         </Select>

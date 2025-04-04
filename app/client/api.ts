@@ -1,8 +1,10 @@
 import { getClientConfig } from "../config/client";
 import {
   ACCESS_CODE_PREFIX,
-  ModelProvider,
-  ServiceProvider,
+- ModelProvider,
+- ServiceProvider,
++ // ModelProvider, // Removed as we only support OpenAI compatible now
++ ServiceProvider, // Keep ServiceProvider for now, might be used differently
 } from "../constant";
 import {
   ChatMessageTool,
@@ -28,11 +30,11 @@ export interface MultimodalContent {
   };
 }
 
-export interface MultimodalContentForAlibaba {
-  text?: string;
-  image?: string;
-}
-
+-export interface MultimodalContentForAlibaba {
+-  text?: string;
+-  image?: string;
+-}
+-
 export interface RequestMessage {
   role: MessageRole;
   content: string | MultimodalContent[];
@@ -99,36 +101,39 @@ export abstract class LLMApi {
   abstract models(): Promise<LLMModel[]>;
 }
 
-type ProviderName = "openai" | "azure" | "claude" | "palm";
-
-interface Model {
-  name: string;
-  provider: ProviderName;
-  ctxlen: number;
-}
-
-interface ChatProvider {
-  name: ProviderName;
-  apiConfig: {
-    baseUrl: string;
-    apiKey: string;
-    summaryModel: Model;
-  };
-  models: Model[];
-
-  chat: () => void;
-  usage: () => void;
-}
-
+-type ProviderName = "openai" | "azure" | "claude" | "palm";
+-
+-interface Model {
+-  name: string;
+-  provider: ProviderName;
+-  ctxlen: number;
+-}
+-
+-interface ChatProvider {
+-  name: ProviderName;
+-  apiConfig: {
+-    baseUrl: string;
+-    apiKey: string;
+-    summaryModel: Model;
+-  };
+-  models: Model[];
+-
+-  chat: () => void;
+-  usage: () => void;
+-}
+-
 export class ClientApi {
   public llm: LLMApi;
 
-  constructor(provider: ModelProvider = ModelProvider.GPT) {
-    switch (provider) {
-      
-      default:
-        this.llm = new ChatGPTApi();
-    }
+- constructor(provider: ModelProvider = ModelProvider.GPT) {
+-   switch (provider) {
+-     
+-     default:
+-       this.llm = new ChatGPTApi();
+-   }
++ constructor() {
++   // Always use ChatGPTApi for OpenAI compatible endpoint
++   this.llm = new ChatGPTApi();
   }
 
   config() {}

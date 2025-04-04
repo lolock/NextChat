@@ -27,7 +27,7 @@ import ShareIcon from "../icons/share.svg";
 import DownloadIcon from "../icons/download.svg";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageSelector, useMessageSelector } from "./message-selector";
-import { Avatar } from "./emoji";
+import { Avatar, EmojiAvatar } from "./emoji";
 import dynamic from "next/dynamic";
 import NextImage from "next/image";
 
@@ -38,7 +38,7 @@ import { EXPORT_MESSAGE_CLASS_NAME } from "../constant";
 import { getClientConfig } from "../config/client";
 import { type ClientApi, getClientApi } from "../client/api";
 import { getMessageTextContent } from "../utils";
-import { MaskAvatar } from "./mask";
+- // import { MaskAvatar } from "./mask"; // Removed MaskAvatar import
 import clsx from "clsx";
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
@@ -155,7 +155,7 @@ export function MessageExporter() {
 
   const [exportConfig, setExportConfig] = useState({
     format: "image" as ExportFormat,
-    includeContext: true,
+    // includeContext: true, // Removed includeContext
   });
 
   function updateExportConfig(updater: (config: typeof exportConfig) => void) {
@@ -168,16 +168,13 @@ export function MessageExporter() {
   const session = chatStore.currentSession();
   const { selection, updateSelection } = useMessageSelector();
   const selectedMessages = useMemo(() => {
-    const ret: ChatMessage[] = [];
-    if (exportConfig.includeContext) {
-      ret.push(...session.mask.context);
-    }
-    ret.push(...session.messages.filter((m) => selection.has(m.id)));
+    // Removed context inclusion logic
+    const ret: ChatMessage[] = session.messages.filter((m) =>
+      selection.has(m.id),
+    );
     return ret;
   }, [
-    exportConfig.includeContext,
     session.messages,
-    session.mask.context,
     selection,
   ]);
   function preview() {
@@ -227,20 +224,7 @@ export function MessageExporter() {
               ))}
             </Select>
           </ListItem>
-          <ListItem
-            title={Locale.Export.IncludeContext.Title}
-            subTitle={Locale.Export.IncludeContext.SubTitle}
-          >
-            <input
-              type="checkbox"
-              checked={exportConfig.includeContext}
-              onChange={(e) => {
-                updateExportConfig(
-                  (config) => (config.includeContext = e.currentTarget.checked),
-                );
-              }}
-            ></input>
-          </ListItem>
+          {/* Removed Include Context ListItem */}
         </List>
         <MessageSelector
           selection={selection}
@@ -454,34 +438,8 @@ export function ImagePreviewer(props: {
       const blob = await toPng(dom);
       if (!blob) return;
 
-      if (isMobile || (isApp && window.__TAURI__)) {
-        if (isApp && window.__TAURI__) {
-          const result = await window.__TAURI__.dialog.save({
-            defaultPath: `${props.topic}.png`,
-            filters: [
-              {
-                name: "PNG Files",
-                extensions: ["png"],
-              },
-              {
-                name: "All Files",
-                extensions: ["*"],
-              },
-            ],
-          });
-
-          if (result !== null) {
-            const response = await fetch(blob);
-            const buffer = await response.arrayBuffer();
-            const uint8Array = new Uint8Array(buffer);
-            await window.__TAURI__.fs.writeBinaryFile(result, uint8Array);
-            showToast(Locale.Download.Success);
-          } else {
-            showToast(Locale.Download.Failed);
-          }
-        } else {
-          showImageModal(blob);
-        }
+      if (isMobile) { // Removed Tauri check, only check for mobile
+        showImageModal(
       } else {
         const link = document.createElement("a");
         link.download = `${props.topic}.png`;
@@ -531,10 +489,10 @@ export function ImagePreviewer(props: {
             <div className={styles["icons"]}>
               <MaskAvatar avatar={config.avatar} />
               <span className={styles["icon-space"]}>&</span>
-              <MaskAvatar
-                avatar={mask.avatar}
-                model={session.mask.modelConfig.model}
-              />
+-             <MaskAvatar
+-               avatar={mask.avatar}
+-               model={session.mask.modelConfig.model}
+-             />
             </div>
           </div>
           <div>
@@ -692,3 +650,231 @@ export function JsonPreviewer(props: {
     </>
   );
 }
+
+function ExportActions(props: {
+  messages: ChatMessage[];
+  topic: string;
+  format: ExportFormat;
+}) {
+  const config = useAppConfig();
+  const chatStore = useChatStore();
+  const session = chatStore.currentSession();
+  const clientApi: ClientApi = getClientApi();
+
+  const shareToShareGPT = async () => {
+    const GITHUB_ISSUE_URL = "https://github.com/ChatGPTNextWeb/sharegpt-collection";
+    const isMobile = useMobileScreen();
+
+    const shareUrl = await clientApi.share(session);
+    if (!shareUrl) {
+      showToast(Locale.Export.ShareFail);
+      return;
+    }
+
+    const shareContent = Locale.Share.Content(shareUrl);
+
+    if (isMobile || !window.navigator.clipboard) {
+      showModal({
+        title: Locale.Export.Share, // Share to ShareGPT
+        children: (
+          <input
+            type="text"
+            value={shareContent}
+            readOnly
+            onClick={(e) => e.currentTarget.select()}
+            style={{
+              width: "100%",
+              maxWidth: "unset",
+            }}
+          ></input>
+        ),
+        actions: [
+          <IconButton
+            key="copy"
+            icon={<CopyIcon />}
+            bordered
+            text={Locale.Chat.Actions.Copy}
+            onClick={() => {
+              copyToClipboard(shareContent);
+            }}
+          />,
+        ],
+      });
+      return;
+    }
+
+    copyToClipboard(shareContent);
+
+    const result = await showModal({
+      title: Locale.Export.Share, // Share to ShareGPT
+      children: (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: Locale.Share.Success(GITHUB_ISSUE_URL),
+          }}
+        ></div>
+      ),
+      actions: [
+        <button
+          className="btn btn-primary"
+          key="copy"
+          onClick={() => {
+            window.open(GITHUB_ISSUE_URL, "_blank");
+          }}
+        >
+          {Locale.Share.Open}
+        </button>,
+      ],
+    });
+  };
+
+  const download = async () => {
+    if (props.format === "text") {
+      const messageText = props.messages
+        .map((m) => {
+          let sender = "";
+          // if (m.role === "user") {
+          //   sender = `
+          // **${config.avatar}**:
+          // `;
+          // } else if (m.role === "assistant") {
+          //   sender = `
+          // **${session.mask.name}**:
+          // `;
+          // } else if (m.role === "system") {
+          //   sender = `
+          // **SYSTEM**:
+          // `;
+          // } else if ("tool_calls" in m) {
+          //   sender = `
+          // **${m.name || "function_call"}**:
+          // `;
+          // }
+          // Simplified sender logic without mask
+          if (m.role === "user") {
+            sender = `\n**${config.avatar}**:\n`;
+          } else if (m.role === "assistant") {
+            sender = `\n**Assistant**:\n`;
+          } else if (m.role === "system") {
+            sender = `\n**SYSTEM**:\n`;
+          } else if ("tool_calls" in m) {
+            sender = `\n**${m.name || "function_call"}**:\n`;
+          }
+
+          return sender + getMessageTextContent(m);
+        })
+        .join("\n\n");
+      downloadAs(messageText, `${props.topic}.txt`);
+    } else if (props.format === "json") {
+      const messageJson = JSON.stringify(props.messages, null, 2);
+      downloadAs(messageJson, `${props.topic}.json`);
+    } else if (props.format === "image") {
+      // wait for image render
+      await new Promise<void>((res) => setTimeout(() => res(), 500));
+      const dom = document.querySelector(".export-preview") as HTMLElement;
+      if (!dom) return;
+
+      toPng(dom)
+        .then((blob) => {
+          if (!blob) return;
+          downloadAs(blob, `${props.topic}.png`);
+        })
+        .catch((e) => {
+          console.error("[Export] failed to export image", e);
+          showToast(Locale.Export.Image.Fail);
+        });
+    }
+  };
+
+  const copy = async () => {
+    if (props.format === "text") {
+      const messageText = props.messages
+        .map((m) => {
+          let sender = "";
+          // Simplified sender logic without mask
+          if (m.role === "user") {
+            sender = `\n**${config.avatar}**:\n`;
+          } else if (m.role === "assistant") {
+            sender = `\n**Assistant**:\n`;
+          } else if (m.role === "system") {
+            sender = `\n**SYSTEM**:\n`;
+          } else if ("tool_calls" in m) {
+            sender = `\n**${m.name || "function_call"}**:\n`;
+          }
+          return sender + getMessageTextContent(m);
+        })
+        .join("\n\n");
+      await copyToClipboard(messageText);
+      showToast(Locale.Export.Text.Success);
+    } else if (props.format === "json") {
+      const messageJson = JSON.stringify(props.messages, null, 2);
+      await copyToClipboard(messageJson);
+      showToast(Locale.Export.Json.Success);
+    } else if (props.format === "image") {
+      // wait for image render
+      await new Promise<void>((res) => setTimeout(() => res(), 500));
+      const dom = document.querySelector(".export-preview") as HTMLElement;
+      if (!dom) return;
+
+      try {
+        const blob = await toBlob(dom);
+        if (!blob) throw new Error("Failed to create blob");
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": blob,
+          }),
+        ]);
+        showToast(Locale.Export.Image.Success);
+      } catch (e) {
+        console.error("[Export] failed to copy image", e);
+        showToast(Locale.Export.Image.Fail);
+      }
+    }
+  };
+
+  return (
+    <div className={styles["export-actions"]}>
+      <div className={styles["content"]}>
+        <IconButton
+          text={`${Locale.Export.Share}`}
+          icon={<ShareIcon />}
+          bordered
+          shadow
+          onClick={() => {
+            shareToShareGPT();
+          }}
+        />
+        <IconButton
+          text={`${Locale.Export.Copy}`}
+          icon={<CopyIcon />}
+          bordered
+          shadow
+          onClick={copy}
+        />
+        <IconButton
+          text={Locale.Export.Download}
+          icon={<DownloadIcon />}
+          bordered
+          shadow
+          onClick={download}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PreviewHeader(props: { topic: string; messages: ChatMessage[] }) {
+  const config = useAppConfig();
+
+  return (
+    <div className={styles["preview-header"]}>
+      <div className={styles["preview-header-title"]}>
+        <div>{props.topic}</div>
+        <div className={styles["preview-header-sub-title"]}>
+          {Locale.Export.Messages(props.messages.length)}
+        </div>
+      </div>
+
+      {
+        <>
+          <div className={styles["specify-model"]}>

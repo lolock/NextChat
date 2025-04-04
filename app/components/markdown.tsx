@@ -8,6 +8,7 @@ import RehypeHighlight from "rehype-highlight";
 import { useRef, useState, RefObject, useEffect, useMemo } from "react";
 import { copyToClipboard, useWindowSize } from "../utils";
 import mermaid from "mermaid";
+import { Mermaid } from "./mermaid";
 import Locale from "../locales";
 import LoadingIcon from "../icons/three-dots.svg";
 import ReloadButtonIcon from "../icons/reload.svg";
@@ -19,10 +20,10 @@ import {
   HTMLPreview,
   HTMLPreviewHander,
 } from "./artifacts";
-import { useChatStore } from "../store";
+import { useAppConfig, useChatStore } from "../store";
+import { fenceMap } from "./code-block";
 import { IconButton } from "./button";
 
-import { useAppConfig } from "../store/config";
 import clsx from "clsx";
 
 export function Mermaid(props: { code: string }) {
@@ -100,8 +101,7 @@ export function PreCode(props: { children: any }) {
   }, 600);
 
   const config = useAppConfig();
-  const enableArtifacts =
-    session.mask?.enableArtifacts !== false && config.enableArtifacts;
+  const enableArtifacts = config.enableArtifacts;
 
   //Wrap the paragraph for plain-text
   useEffect(() => {
@@ -177,8 +177,7 @@ function CustomCode(props: { children: any; className?: string }) {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
   const config = useAppConfig();
-  const enableCodeFold =
-    session.mask?.enableCodeFold !== false && config.enableCodeFold;
+  const enableCodeFold = config.enableCodeFold;
 
   const ref = useRef<HTMLPreElement>(null);
   const [collapsed, setCollapsed] = useState(true);

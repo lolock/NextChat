@@ -211,27 +211,28 @@ export function MessageSelector(props: {
                 {m.role === "user" ? (
                   <Avatar avatar={config.avatar}></Avatar>
                 ) : (
-                  <MaskAvatar
+                  // Removed MaskAvatar
+                  {/* <MaskAvatar
                     avatar={session.mask.avatar}
                     model={m.model || session.mask.modelConfig.model}
-                  />
-                )}
-              </div>
-              <div className={styles["body"]}>
-                <div className={styles["date"]}>
-                  {new Date(m.date).toLocaleString()}
-                </div>
-                <div className={clsx(styles["content"], "one-line")}>
-                  {getMessageTextContent(m)}
-                </div>
-              </div>
+                  /> */}
+                  <div className={styles["message-info"]}>
+                    <div className={styles["message-date"]}>
+                      {new Date(m.date).toLocaleString()}
+                    </div>
+                    <div className={clsx(styles["content"], "one-line")}>
+                      {getMessageTextContent(m)}
+                    </div>
+                  </div>
 
-              <div className={styles["checkbox"]}>
-                <input type="checkbox" checked={isSelected} readOnly></input>
-              </div>
-            </div>
-          );
-        })}
+                  <div className={styles["checkbox"]}>
+                    <input type="checkbox" checked={isSelected} readOnly></input>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

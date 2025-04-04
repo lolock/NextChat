@@ -12,7 +12,7 @@ import {
   DEFAULT_TTS_VOICE,
   DEFAULT_TTS_VOICES,
   StoreKey,
-  ServiceProvider,
+\n  // ServiceProvider import removed as provider selection is removed
 } from "../constant";
 import { createPersistStore } from "../utils/store";
 import type { Voice } from "rt-client";
@@ -57,15 +57,15 @@ export const DEFAULT_CONFIG = {
 
   disablePromptHint: false,
 
-  dontShowMaskSplashScreen: false, // dont show splash screen when create chat
-  hideBuiltinMasks: false, // dont add builtin masks
+  // dontShowMaskSplashScreen: false, // dont show splash screen when create chat
+  // hideBuiltinMasks: false, // dont add builtin masks
 
   customModels: "",
   models: DEFAULT_MODELS as any as LLMModel[],
 
   modelConfig: {
     model: "gpt-4o-mini" as ModelType,
-    providerName: "OpenAI" as ServiceProvider,
+    // providerName field removed
     temperature: 0.5,
     top_p: 1,
     max_tokens: 4000,
@@ -75,7 +75,7 @@ export const DEFAULT_CONFIG = {
     historyMessageCount: 4,
     compressMessageLengthThreshold: 1000,
     compressModel: "",
-    compressProviderName: "",
+    // compressProviderName field removed
     enableInjectSystemPrompts: true,
     template: config?.template ?? DEFAULT_INPUT_TEMPLATE,
     size: "1024x1024" as ModelSize,
@@ -94,7 +94,7 @@ export const DEFAULT_CONFIG = {
 
   realtimeConfig: {
     enable: false,
-    provider: "OpenAI" as ServiceProvider,
+    // provider field removed
     model: "gpt-4o-realtime-preview-2024-10-01",
     apiKey: "",
     azure: {
@@ -168,46 +168,35 @@ export const useAppConfig = createPersistStore(
       set(() => ({ ...DEFAULT_CONFIG }));
     },
 
-    mergeModels(newModels: LLMModel[]) {
-      if (!newModels || newModels.length === 0) {
-        return;
-      }
+    // mergeModels function is removed as provider logic is simplified
 
-      const oldModels = get().models;
-      const modelMap: Record<string, LLMModel> = {};
-
-      for (const model of oldModels) {
-        model.available = false;
-        modelMap[`${model.name}@${model?.provider?.id}`] = model;
-      }
-
-      for (const model of newModels) {
-        model.available = true;
-        modelMap[`${model.name}@${model?.provider?.id}`] = model;
-      }
-
-      set(() => ({
-        models: Object.values(modelMap),
-      }));
+    updateModels(newModels: LLMModel[]) {
+      if (!newModels) return;
+      // Directly set the models provided by the backend
+      set(() => ({ models: newModels.filter(m => m.available) }));
     },
 
-    allModels() {},
+    allModels() {
+      // This might need adjustment depending on how models are fetched now
+      return get().models;
+    },
   }),
   {
     name: StoreKey.Config,
-    version: 4.1,
+    version: 4.2, // Increment version due to schema change
 
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
       if (!state) return { ...currentState };
       const models = currentState.models.slice();
+      // Simplified merge logic assuming single provider source
       state.models.forEach((pModel) => {
-        const idx = models.findIndex(
-          (v) => v.name === pModel.name && v.provider === pModel.provider,
-        );
-        if (idx !== -1) models[idx] = pModel;
-        else models.push(pModel);
-      });
+        const idx = models.findIndex((v) => v.name === pModel.name);
+        if (idx === -1) {
+          models.push(pModel);
+        } else {
+          // Optional: update existing model details if needed
+          // models[idx] = { ...models[idx], ...pModel };
       return { ...currentState, ...state, models: models };
     },
 
@@ -221,9 +210,8 @@ export const useAppConfig = createPersistStore(
         state.modelConfig.frequency_penalty = 0;
         state.modelConfig.top_p = 1;
         state.modelConfig.template = DEFAULT_INPUT_TEMPLATE;
-        state.dontShowMaskSplashScreen = false;
-        state.hideBuiltinMasks = false;
-      }
+        // state.dontShowMaskSplashScreen = false;
+        // state.hideBuilt
 
       if (version < 3.5) {
         state.customModels = "claude,claude-100k";
@@ -251,11 +239,1371 @@ export const useAppConfig = createPersistStore(
       if (version < 4.1) {
         state.modelConfig.compressModel =
           DEFAULT_CONFIG.modelConfig.compressModel;
-        state.modelConfig.compressProviderName =
-          DEFAULT_CONFIG.modelConfig.compressProviderName;
+        // state.modelConfig.compressProviderName = // Field removed
+        //   DEFAULT_CONFIG.modelConfig.compressProviderName;
       }
+
+      // Migration for version 4.2: remove provider fields
+      if (version < 4.2) {
+        if (state.modelConfig && 'providerName' in state.modelConfig) {
+           delete (state.modelConfig as any).providerName;
+        }
+        if (state.modelConfig && 'compressProviderName' in state.modelConfig) {
+           delete (state.modelConfig as any).compressProviderName;
+        }
+         if (state.realtimeConfig && 'provider' in state.realtimeConfig) {
+           delete (state.realtimeConfig as any).provider;
+        }
+        // Consider how to handle the 'models' array if it contains provider info
+        // E.g., reset to default or filter based on the single supported provider concept
+        // state.models = DEFAULT_MODELS; // Simpl
 
       return state as any;
     },
   },
 );
+
+export interface AppConfig {
+  resetConfig() {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sunoApiKey = "";
+  //     state.sunoBaseUrl = "";
+  //     state.sunoGptModel = "";
+  //     state.sunoOutputsDir = "";
+  //     state.sunoHistoryDir = "";
+  //     state.sunoKeepTemp = false;
+  //     state.siliconflowApiKey = "";
+  //     state.submitKey = "";
+  //     state.tightBorder = false;
+  //     state.disablePromptHint = DEFAULT_CONFIG.disablePromptHint;
+  //     state.enableAutoGenerateTitle = DEFAULT_CONFIG.enableAutoGenerateTitle;
+  //     state.dontShowMaskSplashScreen = false;
+  //     state.hideBuiltinMasks = false;
+  //     state.customModels = "";
+  //     state.pluginConfig = DEFAULT_CONFIG.pluginConfig;
+  //     state.ttsConfig = DEFAULT_CONFIG.ttsConfig;
+  //     state.webDav = DEFAULT_CONFIG.webDav;
+  //     state.upstash = DEFAULT_CONFIG.upstash;
+  //     state.artifactsConfig = DEFAULT_CONFIG.artifactsConfig;
+  //   });
+  // },
+
+  update(updater) {
+    set(() => ({
+      ...DEFAULT_CONFIG,
+    }));
+  },
+
+  // resetPersistConfig() {
+  //   set((state) => {
+  //     state.token = "";
+  //     state.accessCode = "";
+  //     state.useCustomConfig = false;
+  //     state.providerName = ServiceProvider.OpenAI;
+  //     state.modelConfig = {
+  //       ...DEFAULT_CONFIG.modelConfig,
+  //       model: ModelProvider.getModelForProvider(state.providerName)?.[0]?.name ?? "",
+  //       providerName: state.providerName,
+  //     };
+  //     state.openaiApiKey = "";
+  //     state.anthropicApiKey = "";
+  //     state.azureApiKey = "";
+  //     state.azureApiVersion = DEFAULT_CONFIG.azureApiVersion;
+  //     state.azureEndpoint = "";
+  //     state.googleApiKey = "";
+  //     state.googleApiVersion = DEFAULT_CONFIG.googleApiVersion;
+  //     state.googleGeminiModel = "";
+  //     state.baiduApiKey = "";
+  //     state.baiduSecretKey = "";
+  //     state.alibabaApiKey = "";
+  //     state.tencentApiKey = "";
+  //     state.tencentSecretId = "";
+  //     state.tencentSecretKey = "";
+  //     state.bytedanceApiKey = "";
+  //     state.bytedanceSecretKey = "";
+  //     state.moonshotApiKey = "";
+  //     state.iflytekApiKey = "";
+  //     state.iflytekApiSecret = "";
+  //     state.iflytekAppId = "";
+  //     state.glmApiKey = "";
+  //     state.deepseekApiKey = "";
+  //     state.xaiApiKey = "";
+  //     state.sun

@@ -4,7 +4,7 @@ import {
   useAppConfig,
   useChatStore,
 } from "../store";
-import { useMaskStore } from "../store/mask";
+// import { useMaskStore } from "../store/mask";
 import { usePromptStore } from "../store/prompt";
 import { StoreKey } from "../constant";
 import { merge } from "./merge";
@@ -163,3 +163,21 @@ export function mergeWithUpdate<T extends { lastUpdateTime?: number }>(
     return { ...localState };
   }
 }
+
+const storeUpdaters = {
+  [StoreKey.Access]: useAccessStore.setState,
+  [StoreKey.Config]: useAppConfig.setState,
+  [StoreKey.Chat]: useChatStore.setState,
+  // [StoreKey.Mask]: useMaskStore.setState, // Removed Mask store updater
+  [StoreKey.Prompt]: usePromptStore.setState,
+  [StoreKey.Settings]: useSettingsStore.setState,
+};
+
+const storeGetters = {
+  [StoreKey.Access]: () => getNonFunctionFileds(useAccessStore.getState()),
+  [StoreKey.Config]: () => getNonFunctionFileds(useAppConfig.getState()),
+  [StoreKey.Chat]: () => getNonFunctionFileds(useChatStore.getState()),
+  // [StoreKey.Mask]: () => getNonFunctionFileds(useMaskStore.getState()), // Removed Mask store getter
+  [StoreKey.Prompt]: () => getNonFunctionFileds(usePromptStore.getState()),
+  [StoreKey.Settings]: () => getNonFunctionFileds(useSettingsStore.getState()),
+};

@@ -7,8 +7,6 @@ import {
   REQUEST_TIMEOUT_MS_FOR_THINKING,
   ServiceProvider,
 } from "./constant";
-// import { fetch as tauriFetch, ResponseType } from "@tauri-apps/api/http";
-import { fetch as tauriStreamFetch } from "./utils/stream";
 import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
 import { useAccessStore } from "./store";
 import { ModelSize } from "./typing";
@@ -27,14 +25,9 @@ export function trimTopic(topic: string) {
 
 export async function copyToClipboard(text: string) {
   try {
-    if (window.__TAURI__) {
-      window.__TAURI__.writeText(text);
-    } else {
-      await navigator.clipboard.writeText(text);
-    }
-
+    await navigator.clipboard.writeText(text);
     showToast(Locale.Copy.Success);
-  } catch (error) {
+  } catch (error) { // Keep fallback for environments without clipboard API
     const textArea = document.createElement("textarea");
     textArea.value = text;
     document.body.appendChild(textArea);
@@ -51,46 +44,20 @@ export async function copyToClipboard(text: string) {
 }
 
 export async function downloadAs(text: string, filename: string) {
-  if (window.__TAURI__) {
-    const result = await window.__TAURI__.dialog.save({
-      defaultPath: `${filename}`,
-      filters: [
-        {
-          name: `${filename.split(".").pop()} files`,
-          extensions: [`${filename.split(".").pop()}`],
-        },
-        {
-          name: "All Files",
-          extensions: ["*"],
-        },
-      ],
-    });
+  const element = document.createElement("a");
+  element.setAttribute(
+    "href",
+    "data:text/plain;charset=utf-8," + encodeURIComponent(text),
+  );
+  element.setAttribute("download", filename);
 
-    if (result !== null) {
-      try {
-        await window.__TAURI__.fs.writeTextFile(result, text);
-        showToast(Locale.Download.Success);
-      } catch (error) {
-        showToast(Locale.Download.Failed);
-      }
-    } else {
-      showToast(Locale.Download.Failed);
-    }
-  } else {
-    const element = document.createElement("a");
-    element.setAttribute(
-      "href",
-      "data:text/plain;charset=utf-8," + encodeURIComponent(text),
-    );
-    element.setAttribute("download", filename);
+  element.style.display = "none";
+  document.body.appendChild(element);
 
-    element.style.display = "none";
-    document.body.appendChild(element);
+  element.click();
 
-    element.click();
-
-    document.body.removeChild(element);
-  }
+  document.body.removeChild(element);
+  // Consider adding toast messages for success/failure here if needed
 }
 
 export function readFromFile() {
@@ -354,9 +321,6 @@ export function fetch(
   url: string,
   options?: Record<string, unknown>,
 ): Promise<any> {
-  if (window.__TAURI__) {
-    return tauriStreamFetch(url, options);
-  }
   return window.fetch(url, options);
 }
 
@@ -447,27 +411,9 @@ export function getOperationId(operation: {
 }
 
 export function clientUpdate() {
-  // this a wild for updating client app
-  return window.__TAURI__?.updater
-    .checkUpdate()
-    .then((updateResult) => {
-      if (updateResult.shouldUpdate) {
-        window.__TAURI__?.updater
-          .installUpdate()
-          .then((result) => {
-            showToast(Locale.Settings.Update.Success);
-          })
-          .catch((e) => {
-            console.error("[Install Update Error]", e);
-            showToast(Locale.Settings.Update.Failed);
-          });
-      }
-    })
-    .catch((e) => {
-      console.error("[Check Update Error]", e);
-      showToast(Locale.Settings.Update.Failed);
-    });
-}
+  // Placeholder for potential future web-based update mechanism
+  console.log("Update check skipped in web version.");
+  return Promise.resolve(); // Return a resolved
 
 // https://gist.github.com/iwill/a83038623ba4fef6abb9efca87ae9ccb
 export function semverCompare(a: string, b: string) {

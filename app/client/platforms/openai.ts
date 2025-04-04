@@ -43,7 +43,7 @@ import {
   isDalle3 as _isDalle3,
   getTimeoutMSByModel,
 } from "@/app/utils";
-import { fetch } from "@/app/utils/stream";
+//import { fetch } from "@/app/utils/stream";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -186,7 +186,8 @@ export class ChatGPTApi implements LLMApi {
   async chat(options: ChatOptions) {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
-      ...useChatStore.getState().currentSession().mask.modelConfig,
+      // ...useChatStore.getState().currentSession()?.mask.modelConfig, // Removed mask config merging
+      // ...useChatStore.getState().currentSession()?.mask.modelConfig, // Use global config base
       ...{
         model: options.config.model,
         providerName: options.config.providerName,
@@ -291,15 +292,16 @@ export class ChatGPTApi implements LLMApi {
         const [tools, funcs] = usePluginStore
           .getState()
           .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
+            [] // Removed mask plugin usage: useChatStore.getState().currentSession().mask?.plugin || []
           );
         // console.log("getAsTools", tools, funcs);
         streamWithThink(
           chatPath,
           requestPayload,
           getHeaders(),
-          tools as any,
-          funcs,
+          // TODO: Re-enable plugin/tool support if needed without mask
+          [] as any, // Disable tools for now
+          {},
           controller,
           // parseSSE
           (text: string, runTools: ChatMessageTool[]) => {

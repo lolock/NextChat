@@ -14,21 +14,21 @@ export interface Prompt {
 
 export const SearchService = {
   ready: false,
-  builtinEngine: new Fuse<Prompt>([], { keys: ["title"] }),
+  // builtinEngine: new Fuse<Prompt>([], { keys: ["title"] }), // Remove built-in engine
   userEngine: new Fuse<Prompt>([], { keys: ["title"] }),
-  count: {
+  /* count: { // Remove count
     builtin: 0,
-  },
+  }, */
   allPrompts: [] as Prompt[],
-  builtinPrompts: [] as Prompt[],
+  // builtinPrompts: [] as Prompt[], // Remove built-in prompts array
 
-  init(builtinPrompts: Prompt[], userPrompts: Prompt[]) {
+  init(/* builtinPrompts: Prompt[], */ userPrompts: Prompt[]) { // Remove builtinPrompts from init params
     if (this.ready) {
       return;
     }
-    this.allPrompts = userPrompts.concat(builtinPrompts);
-    this.builtinPrompts = builtinPrompts.slice();
-    this.builtinEngine.setCollection(builtinPrompts);
+    this.allPrompts = userPrompts.slice(); // Only use user prompts
+    // this.builtinPrompts = builtinPrompts.slice(); // Remove built-in prompts assignment
+    // this.builtinEngine.setCollection(builtinPrompts); // Remove setting collection for built-in engine
     this.userEngine.setCollection(userPrompts);
     this.ready = true;
   },
@@ -43,8 +43,8 @@ export const SearchService = {
 
   search(text: string) {
     const userResults = this.userEngine.search(text);
-    const builtinResults = this.builtinEngine.search(text);
-    return userResults.concat(builtinResults).map((v) => v.item);
+    // const builtinResults = this.builtinEngine.search(text); // Remove search in built-in engine
+    return userResults.map((v) => v.item); // Return only user results
   },
 };
 
@@ -72,9 +72,9 @@ export const usePromptStore = createPersistStore(
     get(id: string) {
       const targetPrompt = get().prompts[id];
 
-      if (!targetPrompt) {
+      /* if (!targetPrompt) { // Remove fallback to built-in prompts
         return SearchService.builtinPrompts.find((v) => v.id === id);
-      }
+      } */
 
       return targetPrompt;
     },
@@ -124,8 +124,8 @@ export const usePromptStore = createPersistStore(
 
     search(text: string) {
       if (text.length === 0) {
-        // return all rompts
-        return this.getUserPrompts().concat(SearchService.builtinPrompts);
+        // return all prompts
+        return this.getUserPrompts(); // Return only user prompts
       }
       return SearchService.search(text) as Prompt[];
     },
@@ -152,6 +152,7 @@ export const usePromptStore = createPersistStore(
         return;
       }
 
+      /* // Remove fetching and processing prompts.json
       const PROMPT_URL = "./prompts.json";
 
       type PromptList = Array<[string, string]>;
@@ -184,6 +185,10 @@ export const usePromptStore = createPersistStore(
             res.en.length + res.cn.length + res.tw.length;
           SearchService.init(allPromptsForSearch, userPrompts);
         });
+      */
+      // Initialize SearchService with only user prompts after rehydration
+      const userPrompts = usePromptStore.getState().getUserPrompts() ?? [];
+      SearchService.init(userPrompts);
     },
   },
 );

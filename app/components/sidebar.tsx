@@ -8,7 +8,7 @@ import GithubIcon from "../icons/github.svg";
 import ChatGptIcon from "../icons/chatgpt.svg";
 import AddIcon from "../icons/add.svg";
 import DeleteIcon from "../icons/delete.svg";
-import MaskIcon from "../icons/mask.svg";
+// import MaskIcon from "../icons/mask.svg"; // Removed mask icon import
 import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 import DiscoveryIcon from "../icons/discovery.svg";
@@ -36,9 +36,7 @@ import { isMcpEnabled } from "../mcp/actions";
 
 const DISCOVERY = [
   { name: Locale.Plugin.Name, path: Path.Plugins },
-  { name: "Stable Diffusion", path: Path.Sd },
-  { name: Locale.SearchChat.Page.Title, path: Path.SearchChat },
-];
+  { name: Locale.SearchChat.Page.Title, path: Path
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -257,21 +255,22 @@ export function SideBar(props: { className?: string }) {
         shouldNarrow={shouldNarrow}
       >
         <div className={styles["sidebar-header-bar"]}>
-          {mcpEnabled && (
-            <IconButton
-              icon={<McpIcon />}
-              text={shouldNarrow ? undefined : Locale.Mcp.Name}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                navigate(Path.McpMarket, { state: { fromHome: true } });
-              }}
-              shadow
-            />
-          )}
+          {/* Removed MCP Button */}
+          {/* {mcpEnabled && ( */}
+          {/*   <IconButton */}
+          {/*     icon={<McpIcon />} */}
+          {/*     text={shouldNarrow ? undefined : Locale.Mcp.Title} */}
+          {/*     className={styles["sidebar-bar-button"]} */}
+          {/*     onClick={() => { */}
+          {/*       navigate(Path.McpMarket, { state: { fromHome: true } }); */}
+          {/*     }} */}
+          {/*     shadow */}
+          {/*   /> */}
+          {/* )} */}
           {!getButtonDisableState('navigation.discovery') && (
             <IconButton
               icon={<DiscoveryIcon />}
-              text={shouldNarrow ? undefined : Locale.Discovery.Name}
+              text={shouldNarrow ? undefined : Locale.Home.Discovery}
               className={styles["sidebar-bar-button"]}
               onClick={() => setshowDiscoverySelector(true)}
               shadow
@@ -317,44 +316,34 @@ export function SideBar(props: { className?: string }) {
                 }}
               />
             </div>
-            <div className={styles["sidebar-action"]}>
-              <Link to={Path.Settings}>
-                <IconButton
-                  aria={Locale.Settings.Title}
-                  icon={<SettingsIcon />}
-                  shadow
-                />
-              </Link>
-            </div>
-            <div className={styles["sidebar-action"]}>
-              {!getButtonDisableState('navigation.github') && (
-                <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                  <IconButton
-                    aria={Locale.Export.MessageFromChatGPT}
-                    icon={<GithubIcon />}
-                    shadow
-                  />
-                </a>
-              )}
-            </div>
-          </>
-        }
-        secondaryAction={
-          <IconButton
-            icon={<AddIcon />}
-            text={shouldNarrow ? undefined : Locale.Home.NewChat}
-            onClick={() => {
-              if (config.dontShowMaskSplashScreen) {
+            {/* Removed MCP Icon Link */}
+            {/* {isMcpEnabled() && ( */}
+            {/*  <div className={styles["sidebar-action"]}> */}
+            {/*    <Link to={Path.McpMarket}> */}
+            {/*      <IconButton icon={<McpIcon />} shadow /> */}
+            {/*    </Link> */} 
+            {/*  </div> */} 
+            {/* )} */}
+          </div>
+          <div>
+            <IconButton
+              icon={<AddIcon />}
+              text={shouldNarrow ? undefined : Locale.Home.NewChat}
+              onClick={() => {
                 chatStore.newSession();
                 navigate(Path.Chat);
-              } else {
-                navigate(Path.NewChat);
-              }
-            }}
-            shadow
-          />
-        }
-      />
-    </SideBarContainer>
+              }}
+              shadow
+              disabled={disableChatButton}
+              title={disableChatButton ? Locale.Home.NewChatDisableTip : ""}
+            />
+          </div>
+        </div>
+
+        <div className={styles["sidebar-drag"]}>
+          <DragIcon />
+        </div>
+      </SideBarContainer>
+    />
   );
 }

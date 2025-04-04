@@ -40,8 +40,8 @@ export const defaultButtonConfig: ButtonDisableConfig = {
     edit: true,
   },
   settings: {
-    save: true,
-    reset: true,
+    save: false,      // 禁用保存设置按钮
+    reset: false,     // 禁用重置设置按钮
   },
   navigation: {
     discovery: true,    // 默认禁用发现按钮

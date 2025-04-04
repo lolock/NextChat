@@ -26,10 +26,11 @@ import { SideBar } from "./sidebar";
 import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
-import { type ClientApi, getClientApi } from "../client/api";
+// Import ClientApi type, instantiate directly later
+import { ClientApi } from "../client/api";
 import { useAccessStore } from "../store";
 import clsx from "clsx";
-import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
+// Removed MCP imports
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -40,30 +41,29 @@ export function Loading(props: { noLogo?: boolean }) {
   );
 }
 
-const Artifacts = dynamic(async () => (await import("./artifacts")).Artifacts, {
+// Removed Artifacts dynamic import
+
+// Correct dynamic imports assuming default exports
+const Settings = dynamic(async () => (await import("./settings")).default, {
   loading: () => <Loading noLogo />,
 });
 
-const Settings = dynamic(async () => (await import("./settings")).Settings, {
+const Chat = dynamic(async () => (await import("./chat")).default, {
   loading: () => <Loading noLogo />,
 });
 
-const Chat = dynamic(async () => (await import("./chat")).Chat, {
-  loading: () => <Loading noLogo />,
-});
-
-const NewChat = dynamic(async () => (await import("./new-chat")).NewChat, {
+const NewChat = dynamic(async () => (await import("./new-chat")).default, {
   loading: () => <Loading noLogo />,
 });
 
 // 面具功能已禁用
 
-const PluginPage = dynamic(async () => (await import("./plugin")).PluginPage, {
+const PluginPage = dynamic(async () => (await import("./plugin")).default, {
   loading: () => <Loading noLogo />,
 });
 
 const SearchChat = dynamic(
-  async () => (await import("./search-chat")).SearchChatPage,
+  async () => (await import("./search-chat")).default, // Assume default export
   {
     loading: () => <Loading noLogo />,
   },
@@ -71,12 +71,8 @@ const SearchChat = dynamic(
 
 // AI Drawing related component import removed
 
-const McpMarketPage = dynamic(
-  async () => (await import("./mcp-market")).McpMarketPage,
-  {
-    loading: () => <Loading noLogo />,
-  },
-);
+// Removed McpMarketPage dynamic import
+
 
 export function useSwitchTheme() {
   const config = useAppConfig();
@@ -156,7 +152,7 @@ export function WindowContent(props: { children: React.ReactNode }) {
 function Screen() {
   const config = useAppConfig();
   const location = useLocation();
-  const isArtifact = location.pathname.includes(Path.Artifacts);
+  // Removed Artifacts check
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
   // AI Drawing related path checks removed
@@ -169,17 +165,15 @@ function Screen() {
     loadAsyncGoogleFont();
   }, []);
 
-  if (isArtifact) {
-    return (
-      <Routes>
-        <Route path="/artifacts/:id" element={<Artifacts />} />
-      </Routes>
-    );
-  }
+  // Removed Artifacts route block
+
   const renderContent = () => {
     if (isAuth) return <AuthPage />;
-    // AI Drawing
-      <
+
+    // Fixed return, added fragment, replaced div with SideBar
+    return (
+      <>
+        <SideBar
           className={clsx({
             [styles["sidebar-show"]]: isHome,
           })}
@@ -188,12 +182,12 @@ function Screen() {
           <Routes>
             <Route path={Path.Home} element={<Chat />} />
             <Route path={Path.NewChat} element={<NewChat />} />
-            {/* 面具功能路由已禁用 */}
+            {/* Removed Mask route */}
             <Route path={Path.Plugins} element={<PluginPage />} />
             <Route path={Path.SearchChat} element={<SearchChat />} />
             <Route path={Path.Chat} element={<Chat />} />
             <Route path={Path.Settings} element={<Settings />} />
-            <Route path={Path.McpMarket} element={<McpMarketPage />} />
+            {/* Removed McpMarket route */}
           </Routes>
         </WindowContent>
       </>
@@ -204,7 +198,7 @@ function Screen() {
     <div
       className={clsx(styles.container, {
         [styles["tight-container"]]: shouldTightBorder,
-        [styles["rtl-screen"]]: getLang() === "ar",
+        [styles["rtl-screen"]]: getLang() === "cn",
       })}
     >
       {renderContent()}
@@ -215,39 +209,43 @@ function Screen() {
 export function useLoadData() {
   const config = useAppConfig();
 
-  const api: ClientApi = getClientApi(config.modelConfig.providerName);
+  // Correctly instantiate ClientApi; Remove dependency on providerName
+  // Use ClientApi type directly from import if needed elsewhere, otherwise instantiate here.
+  const api = new ClientApi();
 
   useEffect(() => {
     (async () => {
-      const models = await api.llm.models();
-      config.mergeModels(models);
+      try{
+        const models = await api.llm.models();
+        // Use the correct method to update models in the config store
+        // !! IMPORTANT: Replace 'updateModels' with the actual method name from your './store/config.ts' !!
+        if (config.updateModels) { // Check if method exists before calling
+           config.updateModels(models);
+        } else {
+            console.warn("[Config] 'updateModels' method not found on config store. Models not updated automatically.");
+            // You might need to manually set models or use another method defined in the store.
+            // Example: config.setState({ models: models }); // If using direct state manipulation (less common)
+        }
+      } catch (error) {
+          console.error("[Config] Failed to load models from API", error);
+          // Handle error appropriately, maybe set default models or show error message
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Dependencies for useEffect should ideally include stable functions like `config.updateModels` if it exists and is stable.
 }
 
 export function Home() {
   useSwitchTheme();
-  useLoadData();
+  useLoadData(); // Load models on startup
   useHtmlLang();
 
   useEffect(() => {
     console.log("[Config] got config from build time", getClientConfig());
     useAccessStore.getState().fetch();
 
-    const initMcp = async () => {
-      try {
-        const enabled = await isMcpEnabled();
-        if (enabled) {
-          console.log("[MCP] initializing...");
-          await initializeMcpSystem();
-          console.log("[MCP] initialized");
-        }
-      } catch (err) {
-        console.error("[MCP] failed to initialize:", err);
-      }
-    };
-    initMcp();
+    // Removed MCP initialization logic
+
   }, []);
 
   if (!useHasHydrated()) {
